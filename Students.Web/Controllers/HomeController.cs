@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -246,41 +247,69 @@ namespace Students.Web.Controllers
             return string.Concat(sb.ToString().Take(M));
         }
 
+        [Auth]
         public IActionResult Files()
         {
             var files = Directory.EnumerateFiles(Path.Combine(_environment.WebRootPath, "files"));
-            return View(files);
-        }
+            var models = new List<StudentFile>();
 
-        public IActionResult File(string guid)
-        {
-            var file = Path.Combine(_environment.WebRootPath, "files", guid);
-            if (System.IO.File.Exists(file))
+            foreach (var fileName in files)
             {
-                var text = System.IO.File.ReadAllText(file);
-                return View(text);
+                var student = StudentFile.Parse(Path.GetFileName(fileName));
+                if (student.CheckStudentFile() == null)
+                {
+                    models.Add(student);
+                }
             }
-            return View();
+
+            return View(models);
         }
 
+        [Auth]
+        public IActionResult File(StudentFile model)
+        {
+            try
+            {
+                var text = model.ReadFile(_environment.WebRootPath);
+                ViewBag.Content = text;
+                return View(model);
+            }
+            catch (Exception e)
+            {
+                return NotFound(e.Message);
+            }
+        }
+
+        [Auth]
         public IActionResult Upload()
         {
             return View();
         }
 
+        [Auth]
         [HttpPost]
         public async Task<IActionResult> Upload(IFormFile uploadedFile)
         {
             if (uploadedFile != null)
             {
-                // путь к папке Files
-                string path = "/files/" + uploadedFile.FileName;
-                // сохраняем файл в папку Files в каталоге wwwroot
-                await using var fileStream = System.IO.File.Create(Path.Combine(_environment.WebRootPath, path));
-                await uploadedFile.CopyToAsync(fileStream);
-                return RedirectToAction(nameof(Files));
+                try
+                {
+                    var student = StudentFile.Parse(uploadedFile.FileName);
+                    if (student == null)
+                    {
+                        ModelState.AddModelError("", "Ошибка разбора имени файла, длина меньше 13 символов");
+                        return View();
+                    }
+                    using var readStream = new StreamReader(uploadedFile.OpenReadStream());
+                    var content = await readStream.ReadToEndAsync();
+                    student.SaveFile(_environment.WebRootPath, content);
+                }
+                catch (Exception e)
+                {
+                    ModelState.AddModelError("",e.Message);
+                    return View();
+                }
             }
-
             return RedirectToAction(nameof(Files));
         }
     }
@@ -299,5 +328,163 @@ namespace Students.Web.Controllers
     {
         public string Hash { get; set; }
         public DateTime Expired { get; set; }
+    }
+
+    public class StudentFile
+    {
+        public int Year { get; set; }
+
+        public string University { get; set; }
+
+        public string Student { get; set; }
+
+        public string Faculty { get; set; }
+
+        public string Form { get; set; }
+
+        public StudentFile()
+        {
+        }
+
+        public StudentFile(int year, string university, string student, string faculty, string form)
+        {
+            Year = year;
+            University = university;
+            Student = student;
+            Faculty = faculty;
+            Form = form;
+        }
+
+        public string CheckStudentFile()
+        {
+            if (Year < 1900 || Year > 2025)
+            {
+                return "Ошибка указания года (символы с 1 по 4)";
+            }
+
+            if (string.IsNullOrWhiteSpace(University))
+            {
+                return "Код вузка пустой или равен NULL (символы с 5 по 10)";
+            }
+
+            if (University.Length != 6)
+            {
+                return "Длина кода вуза не равна 6 (символы с 5 по 10)";
+            }
+
+            if (string.IsNullOrWhiteSpace(Student))
+            {
+                return "Код данных пустой или равен NULL (символ 11)";
+            }
+
+            if (Student != "S")
+            {
+                return "Указаны не данные студента (символ 11)";
+            }
+
+            if (string.IsNullOrWhiteSpace(Faculty))
+            {
+                return "Код факультета пустой или равен NULL (символ 12)";
+            }
+
+            if (Faculty.Length != 1)
+            {
+                return "Длина кода факультета не равна 1 (символ 12)";
+            }
+
+            if (!("MTI".Any(q=> q.ToString() == Faculty)))
+            {
+                return "Код не равен допустимому значению \"M\" \"T\" \"I\" (символ 12)";
+            }
+
+            if (string.IsNullOrWhiteSpace(Form))
+            {
+                return "Код формы обучения пустой или равен NULL (символ 13)";
+            }
+
+            if (Form.Length != 1)
+            {
+                return "Длина кода формы обучения не равна 1 (символ 13)";
+            }
+
+            if (!("DZ".Any(q => q.ToString() == Form)))
+            {
+                return "Код не равен допустимому значению \"D\" \"Z\" (символ 13)";
+            }
+            return null;
+        }
+
+        /*
+Первые четыре символа являются годом. 
+Следующие шесть символов код вуза. 
+Десятый символ S – указывает на то, что это данные студента. 
+Одиннадцатый символ: 
+М – студент машиностроительного факультета; 
+Т - студент технического факультета; 
+I – студент экономического факультета. 
+Двенадцатый символ:
+D – студент дневного обучения; 
+Z – студент заочного обучения. 
+         */
+
+        public string ReadFile(string root)
+        {
+            var checkStatus = CheckStudentFile();
+            if (checkStatus == null)
+            {
+                var file = Path.Combine(root, "files", $"{Year}{University}{Student}{Faculty}{Form}.txt");
+                if (System.IO.File.Exists(file))
+                {
+                    var text = System.IO.File.ReadAllText(file);
+                    return text;
+                }
+                else
+                {
+                    throw new FileNotFoundException("Файл по указанной моделе не найден");
+                }
+            }
+            else
+            {
+                throw new ArgumentException("Ошибка проверки класса " + checkStatus);
+            }
+        }
+
+        public void SaveFile(string root,string content)
+        {
+            var checkStatus = CheckStudentFile();
+
+            if (checkStatus == null)
+            {
+
+                var file = Path.Combine(root, "files", $"{Year}{University}{Student}{Faculty}{Form}.txt");
+                if (System.IO.File.Exists(file))
+                {
+                    throw new Exception("Файл уже существует");
+                }
+                File.WriteAllText(file, content);
+            }
+            else
+            {
+                throw new ArgumentException("Ошибка проверки класса " + checkStatus);
+            }
+        }
+
+        public static StudentFile Parse(string fileName)
+        {
+            if (fileName.Length < 13)
+            {
+                return null;
+            }
+            var model = new StudentFile
+            {
+                University = fileName.Substring(4,6),
+                Student = fileName.Substring(10,1),
+                Faculty = fileName.Substring(11,1),
+                Form = fileName.Substring(12,1)
+            };
+            int.TryParse(fileName.Substring(0, 4), out var year);
+            model.Year = year;
+            return model;
+        }
     }
 }

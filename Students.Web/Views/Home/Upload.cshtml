@@ -1,0 +1,11 @@
+﻿@{
+    ViewData["Title"] = "Upload";
+}
+
+<h1>Загрузка</h1>
+
+<form asp-action="Upload" asp-controller="Home" method="post" enctype="multipart/form-data">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input type="file" name="uploadedFile"/><br>
+    <input type="submit" value="Загрузить"/>
+</form>

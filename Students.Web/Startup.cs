@@ -24,6 +24,7 @@ namespace Students.Web
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllersWithViews();
+            //services.AddMvc(opt => { opt.Filters.Add(typeof(AuthAttribute)); });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -50,7 +51,8 @@ namespace Students.Web
             {
                 endpoints.MapControllerRoute(
                     name: "default",
-                    pattern: "{controller=Home}/{action=Index}/{id?}");
+                    pattern: "{action=Index}/{id?}",
+                    defaults: new { controller = "Home", action = "Index" });
             });
         }
     }

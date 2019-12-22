@@ -1,0 +1,50 @@
+﻿@model Students.Web.Controllers.StudentFile
+
+@{
+    ViewData["Title"] = "File";
+}
+
+<h1>File</h1>
+
+<div>
+    <h4>Файл</h4>
+    <hr />
+    <dl class="row">
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Year)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Year)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.University)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.University)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Student)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Student)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Faculty)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Faculty)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Form)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Form)
+        </dd>
+    </dl>
+</div>
+<div>
+    @Html.Raw(ViewBag.Content)
+</div>
+<div>
+    <a asp-action="Files">Назад</a>
+</div>
