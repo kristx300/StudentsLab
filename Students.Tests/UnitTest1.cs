@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using NUnit.Framework;
 using Students.Web.Controllers;
+using Students.Web.Models;
 
 namespace Students.Tests
 {
@@ -18,13 +19,13 @@ namespace Students.Tests
         public void Setup()
         {
             using var derivedBytes = new Rfc2898DeriveBytes(Key, saltSize: 16, iterations: 5000, HashAlgorithmName.SHA512);
-            var salt = derivedBytes.Salt;
+            Salt = derivedBytes.Salt;
             byte[] key = derivedBytes.GetBytes(16); // 128 bits key
             Hash = Convert.ToBase64String(key);
         }
 
         [Test]
-        public void Test1Async()
+        public void CacheTesting()
         {
             var user = new UserCacheModel
             {
@@ -44,7 +45,7 @@ namespace Students.Tests
         }
 
         [Test]
-        public void LoginTest()
+        public void LoginLengthTest()
         {
             var login = "naimanov";
             const int M = 12;

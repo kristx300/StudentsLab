@@ -1,10 +1,10 @@
-﻿@model IEnumerable<Students.Web.Controllers.StudentFile>
+﻿@model IEnumerable<StudentFile>
 
 @{
     ViewData["Title"] = "Файлы";
 }
 
-<h1>Files</h1>
+<h1>Файлы</h1>
 
 <p>
     <a asp-action="Upload">Загрузить новый</a>
@@ -13,19 +13,19 @@
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Year)
+                Год
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.University)
+                Университет
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Student)
+                Флаг студента
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Faculty)
+                Факультет
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Form)
+                Форма
             </th>
             <th></th>
         </tr>
@@ -49,8 +49,7 @@
                 @Html.DisplayFor(modelItem => item.Form)
             </td>
             <td>
-                @Html.ActionLink("Открыть", "File", item) |
-                @Html.ActionLink("Delete", "File", new { /* id=item.PrimaryKey */ })
+                @Html.ActionLink("Открыть", "File", item)
             </td>
         </tr>
 }

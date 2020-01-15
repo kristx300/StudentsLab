@@ -16,17 +16,17 @@ using Students.Web.Models;
 
 namespace Students.Web.Controllers
 {
+    [Block]
     public class HomeController : Controller
     {
         private readonly IWebHostEnvironment _environment;
-        private readonly ILogger<HomeController> _logger;
         private readonly IMemoryCache _cache;
         private readonly Random _random = new Random();
         private const string UsersKey = "UsersKey";
         private const string AuthCook = "AuthCook";
-        public HomeController(ILogger<HomeController> logger, IMemoryCache cache, IWebHostEnvironment environment)
+        private static List<string> Attempts = new List<string>();
+        public HomeController(IMemoryCache cache, IWebHostEnvironment environment)
         {
-            _logger = logger;
             _cache = cache;
             _environment = environment;
         }
@@ -39,10 +39,18 @@ namespace Students.Web.Controllers
                 var cache = _cache.Get<UserCacheModel>(cookieHash);
                 if (cache != null)
                 {
-                    ViewBag.Password = cache.Password;
-                    ViewBag.UserName = cache.Login;
+                    if (cache.Expired > DateTime.Now)
+                    {
+                        ViewBag.Password = cache.Password;
+                        ViewBag.UserName = cache.Login;
+                    }
+                    else
+                    {
+                        _cache.Remove(cookieHash);
+                    }
                 }
             }
+
             return View();
         }
 
@@ -75,6 +83,16 @@ namespace Students.Web.Controllers
         [HttpPost]
         public IActionResult Login(LoginViewModel viewModel)
         {
+            if (string.IsNullOrWhiteSpace(viewModel.Login))
+            {
+                ModelState.AddModelError("Login", "Логин пустой");
+                return View(viewModel);
+            }
+            if (string.IsNullOrWhiteSpace(viewModel.Password))
+            {
+                ModelState.AddModelError("Password", "Пароль пустой");
+                return View(viewModel);
+            }
             var cookie = Request.Cookies.TryGetValue(AuthCook, out var cookieHash);
             if (cookie)
             {
@@ -106,6 +124,13 @@ namespace Students.Web.Controllers
             }
             else
             {
+                var key = $"IP{HttpContext.Connection.LocalIpAddress}";
+                Attempts.Add(key);
+                if (Attempts.Count(a=> a == key) >=5)
+                {
+                    Attempts.RemoveAll(a => a == key);
+                    _cache.GetOrCreate(key, k=> DateTime.Now.AddMinutes(5));
+                }
                 ModelState.AddModelError("", "Пользователь не найден");
                 return View(viewModel);
             }
@@ -135,6 +160,11 @@ namespace Students.Web.Controllers
         [HttpPost]
         public IActionResult Register(RegisterViewModel viewModel)
         {
+            if (string.IsNullOrWhiteSpace(viewModel.Login))
+            {
+                ModelState.AddModelError("Login", "Логин пустой");
+                return View(viewModel);
+            }
             var cookie = Request.Cookies.TryGetValue(AuthCook, out var cookieHash);
             if (cookie)
             {
@@ -165,7 +195,7 @@ namespace Students.Web.Controllers
                 return View(viewModel);
             }
 
-            var pass = GetPassword(viewModel.Login);
+            var pass = Utility.GetPassword(viewModel.Login);
             if (pass == null)
             {
                 ModelState.AddModelError("", "Превышена длина логина");
@@ -177,7 +207,7 @@ namespace Students.Web.Controllers
                 Expired = DateTime.Now.AddMinutes(30),
                 Login = viewModel.Login,
                 Password = pass,
-                Hash = GetHash(pass)
+                Hash = Utility.GetHash(pass)
             };
             users.Add(user); 
             _cache.Remove(UsersKey);
@@ -205,47 +235,7 @@ namespace Students.Web.Controllers
             return RedirectToAction(nameof(Index));
         }
         
-        private string GetHash(string password)
-        {
-            using var derivedBytes = new Rfc2898DeriveBytes(password, saltSize: 16, iterations: 5000, HashAlgorithmName.SHA512);
-            var salt = derivedBytes.Salt;
-            byte[] key = derivedBytes.GetBytes(16); // 128 bits key
-            return Convert.ToBase64String(key);
-        }
-
-        private string GetPassword(string login)
-        {
-            char[] low = Enumerable.Range('a', 'z' - 'a' + 1).Select(i => (char)i).ToArray();
-            char[] upper = low.Select(char.ToUpper).ToArray();
-            int[] numbers = Enumerable.Range(1, 9).ToArray();
-            const int M = 12;
-            int N = login.Length;
-            var first = (int)(Math.Pow(N, 3) % 5) + 1;
-            var second = (int)(Math.Pow(N, 2) % 6) + 1 + first;
-            var sb = new StringBuilder();
-
-            for (int i = 1; i <= first; i++)
-            {
-                sb = sb.Append(low[_random.Next(0, low.Length)]);
-            }
-
-            for (int i = first + 1; i <= second; i++)
-            {
-                sb = sb.Append(upper[_random.Next(0, upper.Length)]);
-            }
-
-            for (int i = second + 1; i < M; i++)
-            {
-                sb = sb.Append(numbers[_random.Next(0, numbers.Length)]);
-            }
-
-            if (login.Length > 1 + (2d / 3d) * (double)M)
-            {
-                return null;
-            }
-
-            return string.Concat(sb.ToString().Take(M));
-        }
+        
 
         [Auth]
         public IActionResult Files()
@@ -311,180 +301,6 @@ namespace Students.Web.Controllers
                 }
             }
             return RedirectToAction(nameof(Files));
-        }
-    }
-
-    public class RegisterViewModel
-    {
-        public string Login { get; set; }
-    }
-
-    public class LoginViewModel : RegisterViewModel
-    {
-        public string Password { get; set; }
-    }
-
-    public class UserCacheModel : LoginViewModel
-    {
-        public string Hash { get; set; }
-        public DateTime Expired { get; set; }
-    }
-
-    public class StudentFile
-    {
-        public int Year { get; set; }
-
-        public string University { get; set; }
-
-        public string Student { get; set; }
-
-        public string Faculty { get; set; }
-
-        public string Form { get; set; }
-
-        public StudentFile()
-        {
-        }
-
-        public StudentFile(int year, string university, string student, string faculty, string form)
-        {
-            Year = year;
-            University = university;
-            Student = student;
-            Faculty = faculty;
-            Form = form;
-        }
-
-        public string CheckStudentFile()
-        {
-            if (Year < 1900 || Year > 2025)
-            {
-                return "Ошибка указания года (символы с 1 по 4)";
-            }
-
-            if (string.IsNullOrWhiteSpace(University))
-            {
-                return "Код вузка пустой или равен NULL (символы с 5 по 10)";
-            }
-
-            if (University.Length != 6)
-            {
-                return "Длина кода вуза не равна 6 (символы с 5 по 10)";
-            }
-
-            if (string.IsNullOrWhiteSpace(Student))
-            {
-                return "Код данных пустой или равен NULL (символ 11)";
-            }
-
-            if (Student != "S")
-            {
-                return "Указаны не данные студента (символ 11)";
-            }
-
-            if (string.IsNullOrWhiteSpace(Faculty))
-            {
-                return "Код факультета пустой или равен NULL (символ 12)";
-            }
-
-            if (Faculty.Length != 1)
-            {
-                return "Длина кода факультета не равна 1 (символ 12)";
-            }
-
-            if (!("MTI".Any(q=> q.ToString() == Faculty)))
-            {
-                return "Код не равен допустимому значению \"M\" \"T\" \"I\" (символ 12)";
-            }
-
-            if (string.IsNullOrWhiteSpace(Form))
-            {
-                return "Код формы обучения пустой или равен NULL (символ 13)";
-            }
-
-            if (Form.Length != 1)
-            {
-                return "Длина кода формы обучения не равна 1 (символ 13)";
-            }
-
-            if (!("DZ".Any(q => q.ToString() == Form)))
-            {
-                return "Код не равен допустимому значению \"D\" \"Z\" (символ 13)";
-            }
-            return null;
-        }
-
-        /*
-Первые четыре символа являются годом. 
-Следующие шесть символов код вуза. 
-Десятый символ S – указывает на то, что это данные студента. 
-Одиннадцатый символ: 
-М – студент машиностроительного факультета; 
-Т - студент технического факультета; 
-I – студент экономического факультета. 
-Двенадцатый символ:
-D – студент дневного обучения; 
-Z – студент заочного обучения. 
-         */
-
-        public string ReadFile(string root)
-        {
-            var checkStatus = CheckStudentFile();
-            if (checkStatus == null)
-            {
-                var file = Path.Combine(root, "files", $"{Year}{University}{Student}{Faculty}{Form}.txt");
-                if (System.IO.File.Exists(file))
-                {
-                    var text = System.IO.File.ReadAllText(file);
-                    return text;
-                }
-                else
-                {
-                    throw new FileNotFoundException("Файл по указанной моделе не найден");
-                }
-            }
-            else
-            {
-                throw new ArgumentException("Ошибка проверки класса " + checkStatus);
-            }
-        }
-
-        public void SaveFile(string root,string content)
-        {
-            var checkStatus = CheckStudentFile();
-
-            if (checkStatus == null)
-            {
-
-                var file = Path.Combine(root, "files", $"{Year}{University}{Student}{Faculty}{Form}.txt");
-                if (System.IO.File.Exists(file))
-                {
-                    throw new Exception("Файл уже существует");
-                }
-                File.WriteAllText(file, content);
-            }
-            else
-            {
-                throw new ArgumentException("Ошибка проверки класса " + checkStatus);
-            }
-        }
-
-        public static StudentFile Parse(string fileName)
-        {
-            if (fileName.Length < 13)
-            {
-                return null;
-            }
-            var model = new StudentFile
-            {
-                University = fileName.Substring(4,6),
-                Student = fileName.Substring(10,1),
-                Faculty = fileName.Substring(11,1),
-                Form = fileName.Substring(12,1)
-            };
-            int.TryParse(fileName.Substring(0, 4), out var year);
-            model.Year = year;
-            return model;
         }
     }
 }

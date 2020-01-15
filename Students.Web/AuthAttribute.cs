@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Caching.Memory;
 using Students.Web.Controllers;
+using Students.Web.Models;
 
 namespace Students.Web
 {

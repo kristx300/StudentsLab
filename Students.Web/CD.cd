@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="Students.Web.Models.UserCacheModel">
+    <Position X="0.5" Y="5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAIAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAA=</HashCode>
+      <FileName>Models\UserCacheModel.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Students.Web.Models.RegisterViewModel">
+    <Position X="0.5" Y="1.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAA=</HashCode>
+      <FileName>Models\RegisterViewModel.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Students.Web.Models.LoginViewModel">
+    <Position X="0.5" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAA=</HashCode>
+      <FileName>Models\LoginViewModel.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Students.Web.Models.StudentFile">
+    <Position X="3" Y="1.25" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAgAAAARAAAQIAAAAAACAAAAAAAAAIABAAAAAEAAAA=</HashCode>
+      <FileName>Models\StudentFile.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Students.Web.Controllers.HomeController">
+    <Position X="3" Y="4.75" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAACAAAIAAAAgAAAAAAAgAAAAFIAAAAAEQAAUgAIE=</HashCode>
+      <FileName>Controllers\HomeController.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

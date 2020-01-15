@@ -2,10 +2,10 @@
     ViewData["Title"] = "Home Page";
 }
 
-    <div class="text-center">
-        <h1 class="display-4">Добро пожаловать @ViewBag.UserName!</h1>
-        @if (Context.Request.Cookies.ContainsKey("AuthCook"))
-        {
-            <h5 class="display-4">Ваш пароль @ViewBag.Password</h5>
-        }
-    </div>
+<div class="text-center">
+    <h1 class="display-4">Добро пожаловать @ViewBag.UserName!</h1>
+    @if (Context.Request.Cookies.ContainsKey("AuthCook"))
+    {
+        <h5 class="display-4">Ваш пароль @ViewBag.Password</h5>
+    }
+</div>
